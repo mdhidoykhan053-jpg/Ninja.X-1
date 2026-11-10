@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "Ninja.X-1 - Quotex Round Number SNR Tracker",
+  "version": "3.1.0",
+  "description": "Real-time Institutional Round-Number (00, 50, 80) SNR Price Action HUD for Quotex charts.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "*://*.market-qx.info/*",
+    "*://*.qxbroker.com/*",
+    "*://*.quotex.io/*",
+    "*://*.quotex.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Ninja Round Number Tracker"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.market-qx.info/*",
+        "*://*.qxbroker.com/*",
+        "*://*.quotex.io/*",
+        "*://*.quotex.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_start"
+    }
+  ]
+}
