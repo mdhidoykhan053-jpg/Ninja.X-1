@@ -1,0 +1,45 @@
+async function startNinjaTerminal() {
+  try {
+    const response = await fetch(
+      "https://ninja-x-1-jenm-plum.vercel.app/api/ninja"
+    );
+
+    if (!response.ok) {
+      throw new Error("Backend connection failed");
+    }
+
+    const data = await response.json();
+
+    if (!data.success) {
+      throw new Error("Terminal unavailable");
+    }
+
+    const script = document.createElement("script");
+
+    script.src =
+      "https://ninja-x-1-jenm-plum.vercel.app/api/engine";
+
+    script.onload = () => {
+      document.getElementById("activationModal")
+        ?.remove();
+
+      if (window.NINJA_X1) {
+        console.log("NINJA.X-1 Started");
+      }
+    };
+
+    script.onerror = () => {
+      alert("Engine loading failed!");
+    };
+
+    document.head.appendChild(script);
+
+  } catch (error) {
+    console.error(error);
+    alert("Backend connection failed!");
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  startNinjaTerminal();
+});
