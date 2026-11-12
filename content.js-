@@ -1,0 +1,147 @@
+(function () {
+    "use strict";
+
+    if (window.__NINJA_WS_INSTALLED__) return;
+    window.__NINJA_WS_INSTALLED__ = true;
+
+    console.log("[Ninja.X-1] WebSocket Observer Started");
+
+    const NativeWebSocket = window.WebSocket;
+
+    let lastAsset = null;
+
+    function parsePayload(data) {
+        if (typeof data !== "string") return null;
+
+        const candidates = [data];
+
+        // Socket.IO-style message prefix
+        const match = data.match(/^\d+(\[|\{)/);
+        if (match) candidates.push(data.slice(match[0].length - 1));
+
+        for (const candidate of candidates) {
+            try {
+                return JSON.parse(candidate);
+            } catch (_) {}
+        }
+
+        return null;
+    }
+
+    function findMarketData(obj, depth = 0) {
+        if (!obj || depth > 8) return null;
+
+        if (Array.isArray(obj)) {
+            for (const item of obj) {
+                const result = findMarketData(item, depth + 1);
+                if (result) return result;
+            }
+            return null;
+        }
+
+        if (typeof obj !== "object") return null;
+
+        const asset =
+            obj.asset ||
+            obj.symbol ||
+            obj.instrument ||
+            obj.pair ||
+            lastAsset;
+
+        const rawPrice =
+            obj.price ??
+            obj.close ??
+            obj.quote ??
+            obj.rate;
+
+        if (typeof asset === "string") {
+            lastAsset = asset;
+        }
+
+        const price = Number(rawPrice);
+
+        if (
+            typeof asset === "string" &&
+            rawPrice !== undefined &&
+            Number.isFinite(price) &&
+            price > 0
+        ) {
+            return {
+                asset,
+                price
+            };
+        }
+
+        for (const value of Object.values(obj)) {
+            const result = findMarketData(value, depth + 1);
+            if (result) return result;
+        }
+
+        return null;
+    }
+
+    function inspectMessage(data) {
+        if (typeof data === "string") {
+            const parsed = parsePayload(data);
+            if (parsed === null) return;
+            publish(parsed);
+            return;
+        }
+
+        if (data instanceof ArrayBuffer) {
+            try {
+                const decoded = new TextDecoder().decode(data);
+                const parsed = parsePayload(decoded);
+
+                if (parsed !== null) publish(parsed);
+                else console.log(
+                    "[Ninja.X-1] Binary frame received:",
+                    data.byteLength,
+                    "bytes"
+                );
+            } catch (_) {}
+        }
+
+        if (data instanceof Blob) {
+            data.text().then(inspectMessage).catch(() => {});
+        }
+    }
+
+    function publish(data) {
+        const result = findMarketData(data);
+
+        if (!result) return;
+
+        window.postMessage({
+            type: "Ninja_SNR_TICK",
+            price: result.price,
+            asset: result.asset
+        }, "*");
+    }
+
+    const WebSocketProxy = new Proxy(NativeWebSocket, {
+        construct(target, args) {
+            const socket = Reflect.construct(target, args, target);
+
+            console.log(
+                "[Ninja.X-1] WebSocket Connected:",
+                socket.url.split("?")[0]
+            );
+
+            socket.addEventListener("message", event => {
+                inspectMessage(event.data);
+            });
+
+            socket.addEventListener("close", () => {
+                console.log("[Ninja.X-1] WebSocket Closed");
+            });
+
+            return socket;
+        }
+    });
+
+    window.WebSocket = WebSocketProxy;
+
+    console.log("[Ninja.X-1] WebSocket Interceptor Active");
+
+})();
