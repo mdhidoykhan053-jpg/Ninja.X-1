@@ -1,0 +1,23 @@
+"content_scripts": [
+  {
+    "matches": [
+      "*://*.market-qx.info/*",
+      "*://*.qxbroker.com/*",
+      "*://*.quotex.io/*",
+      "*://*.quotex.com/*"
+    ],
+    "js": ["content.js"],
+    "run_at": "document_start"
+  },
+  {
+    "matches": [
+      "*://*.market-qx.info/*",
+      "*://*.qxbroker.com/*",
+      "*://*.quotex.io/*",
+      "*://*.quotex.com/*"
+    ],
+    "js": ["inject.js"],
+    "run_at": "document_start",
+    "world": "MAIN"
+  }
+]
